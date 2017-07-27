@@ -1,0 +1,10 @@
+dirPath=/tmp/testraw/
+dirTemp=~/temp/$ts #dirTemp must use $ts
+dirProcess=/home/frogbot/mail/mail/processed/
+attackFile=/tmp/attacks4.log
+linksFile=/tmp/links4.log
+locationsFile=/tmp/locs4.log
+
+parse_portals=1
+parse_links=0
+parse_attacks=0
