@@ -3,6 +3,27 @@
 . ~/.ingressparse
 ts=`date +%s`
 
+function portalparse() {
+
+#Split out HTML
+sed 's/=$/\n/g' $1 | tr -d '\n' | sed 's/<td>/\n/g' | recode html..ascii > ${dirTemp}/${ts}-${1}.html
+
+for p in `grep -o -P '(?<=3D.Portal - ).*(?=" h)' ${dirTemp}/${ts}-${1}.html |awk -F "\" h" '{print $1}' | recode html..ascii | sed 's/ /^^/g'`; do
+  pp=`echo $p | sed 's/\^\^/ /g' `
+  ##echo $pp
+  pname=`echo $pp | recode html..ascii | sed 's/"//g' | sed "s/'//g"`
+  intelurl=`grep "$pp" ${dirTemp}/${ts}-${1}.html | sed 's/3D//g' | grep -o  "https://www.ingress.com/intel?ll.*z=19"`
+  latlong=`echo $intelurl | awk -F= '{print $2}' | awk -F\& '{print $1}'`
+  lat=`echo $latlong | awk -F, '{print $1}'`
+  long=`echo $latlong | awk -F, '{print $2}'`
+  #echo "$pp;$intelurl;$latlong;$lat;$long  FILE: $1" ##>> $locationsFile
+  json=`printf '{"pname":"%s", "lat":"%s","long":"%s", "status":"T"}' "$pname" "$lat" "$long"`
+  #echo $json
+  curl -s -H 'Content-Type: application/json' http://localhost:5000/lvfrogtech/portals -X PUT --data "$json" > /dev/null &
+done
+}
+
+
 function alparse() {
  #echo "parsing $1"
  ts=`date +%s`
@@ -19,9 +40,6 @@ function alparse() {
  #csplit -f ${dirTemp}-${ts}/tmp-${ts} $dirTemp/$1 '/STATUS:/' '{*}'
  csplit -s -f ${dirTemp}/${ts}-$1/tmp-${ts} $dirTemp/$1 '/Health:/+2' '{*}'
 
-#Split out HTML
-grep -A 9999 Content-Transfer-Encoding $1 | sed 's/=$//g' $1 | tr -d '\n' | tr '>' '\n\n' | sed 's/&quot;//g' > ${dirTemp}/${ts}-${1}.html
-
  #Parse each segment of email
  for file in `ls -1 ${dirTemp}/${ts}-$1`; do
    #Common Vars
@@ -31,23 +49,6 @@ grep -A 9999 Content-Transfer-Encoding $1 | sed 's/=$//g' $1 | tr -d '\n' | tr '
    portal=`sed '/^\s*$/d' ${dirTemp}/${ts}-${1}/${file} | grep "^Portal" | head -1 | awk -F " - " '{print $2}' | sed 's/"//g'`
    plevel=`grep "^Level" ${dirTemp}/${ts}-${1}/${file} | awk '{print $2}'`
    
-   #Find portal info
-   if [ $parse_portals -eq 1 ]; then
-      chars=0
-      chars=`echo $portal | wc -c`
-      if [ $chars -gt 3 ]; then
-         intelurl=`grep -A 8 "^${portal}" ${dirTemp}/${ts}-${1}.html | sed -e 's/3D//g' | grep -o "https://www.ingress.com/intel?ll.*z=19" | head -1`
-         latlong=`echo $intelurl | awk -F= '{print $2}' | awk -F\& '{print $1}'`
-         lat=`echo $latlong | awk -F, '{print $1}'`
-         long=`echo $latlong | awk -F, '{print $2}'`
-         echo "$portal;$intelurl;$latlong;$lat;$long" ##>> $locationsFile
-         json=`printf '{"pname":"%s", "lat":"%s","long":"%s", "status":"T"}' "$portal" "$lat" "$long"`
-         curl -s -H 'Content-Type: application/json' http://localhost:5000/lvfrogtech/portals -X PUT --data "$json" > /dev/null &
-      fi
-   fi
-
-
-
    grep "DAMAGE REPORT" ${dirTemp}/${ts}-${1}/${file} > /dev/null
    if [ $? -eq 0 ]; then
      #do first segment logic
@@ -100,11 +101,11 @@ echo "Processing...."
 count=0
 for f in `ls -1`; do
    ((count++))
-#   grep "^\*\*" $f > /dev/null
-#   if [ $? -ne 20 ]; then
-        alparse $f
-        ## mv $f $dirProcess
-#   fi
+   #alparse $f
+   if [ $parse_portals -eq 1 ]; then
+      portalparse $f
+   fi
+   ## mv $f $dirProcess
 done
 
 echo "Processed $count files"
