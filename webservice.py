@@ -95,13 +95,13 @@ def portals():
       final = ""
       rows = session.execute(query)
       if not rows:
-          return "No portals found"
+          return '{"count": [{"total": [0]}]}'
       else:
          myjson = {'portals':[], 'count':[]}
          for row in rows:
             d = {}
             d['name'] = str(row.pname)
-            d['inteurl'] = str(row.intelurl)
+            d['intelurl'] = str(row.intelurl)
             myjson.get('portals').append(d)
             
             result = str(row.pname) + ": " + str(row.intelurl)
@@ -111,10 +111,10 @@ def portals():
          myjson.get('count').append(d)
          output = json.dumps(myjson)
          print(output)
-      return final
+      return output
    if request.method == 'PUT':
       try:
-         pname = request.json['pname'].replace('\'','')
+         pname = request.json['pname'] #.replace('\'','')
          lat = request.json['lat']
          long = request.json['long']
          #lat = float(request.json['lat'])
