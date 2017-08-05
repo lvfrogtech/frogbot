@@ -71,12 +71,18 @@ function alparse() {
           remote=`echo $i | sed 's/\^\^/ /g'`
           json=`printf '{"id":"%s", "portal":"%s", "remote":"%s", "attacker":"%s"}' "$attackts" "$portal" "$remote" "$attacker"`
           curl -s -H 'Content-Type: application/json' http://localhost:5000/lvfrogtech/links -X PUT --data "$json" > /dev/null &
+          if [ $botsay_enable -eq 1 ]; then
+             text="#automaton :zap: *$attacker* has destroyed the link from *$portal* to *$remote*"
+             json=`printf '{"channel":"%s", "text":"%s"}' "$botsay_channel" "$text"`
+             curl -s -H 'Content-Type: application/json' http://localhost:5000/lvfrogtech/botsay -X PUT --data "$json" > /dev/null &
+          fi
         done
       fi
    fi
 
  #Parse out attacks
  if [ $parse_attacks -eq 0 ]; then
+    echo "no attack parse"
     valid=0
  fi
  if [ $valid -eq 1 ]; then
@@ -86,6 +92,11 @@ function alparse() {
     json=`printf '{"id":"%s", "owner":"%s", "portal":"%s","plevel":"%s", "address":"%s", "health":"%s", "attacker":"%s", "attacktime":"%s"}' "$attackts" "$owner" "$portal" "$plevel" "$address" "$health" "$attacker" "$attacktime"`
     #echo $json
     curl -s -H 'Content-Type: application/json' http://localhost:5000/lvfrogtech/attacks -X PUT --data "$json" > /dev/null &
+    if [ $botsay_enable -eq 1 ]; then
+       text=":boom: *$attacker* has attacked *$portal* (Level: $plevel  Health: $health Owner: $owner})"
+       json=`printf '{"channel":"%s", "text":"%s"}' "$botsay_channel" "$text"`
+       curl -s -H 'Content-Type: application/json' http://localhost:5000/lvfrogtech/botsay -X PUT --data "$json" > /dev/null &
+    fi
  fi
  #cleanup
  #rm -rf ${dirTemp}/${ts}-${1}
@@ -101,7 +112,7 @@ echo "Processing...."
 count=0
 for f in `ls -1`; do
    ((count++))
-   #alparse $f
+   alparse $f
    if [ $parse_portals -eq 1 ]; then
       portalparse $f
    fi

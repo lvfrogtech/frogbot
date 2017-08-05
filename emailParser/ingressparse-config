@@ -8,3 +8,5 @@ locationsFile=/tmp/locs4.log
 parse_portals=1
 parse_links=0
 parse_attacks=0
+botsay_enable=0
+botsay_channel="#automaton"
